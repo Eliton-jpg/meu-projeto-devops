@@ -1,9 +1,11 @@
 # docker-compose-jenkins.yml
 services:
   jenkins:
+    # Mantenha a configuração de build ou image que funcionou
     build:
       context: .
       dockerfile: Dockerfile.jenkins
+    # Ou image: jenkins/jenkins:lts-jdk17
     container_name: jenkins-server
     privileged: true
     user: root
@@ -13,7 +15,10 @@ services:
     volumes:
       - jenkins_home:/var/jenkins_home
       - /var/run/docker.sock:/var/run/docker.sock
-      - /usr/local/bin/kind:/usr/local/bin/kind
+
+      - /usr/local/bin/kind:/usr/local/bin/kind 
+
+      - /usr/local/bin/kubectl:/usr/local/bin/kubectl
     networks:
       - jenkins_net
 
@@ -23,4 +28,3 @@ volumes:
 networks:
   jenkins_net:
     driver: bridge
-
