@@ -68,6 +68,8 @@ pipeline {
                     sh "kubectl apply -f infra/k8s/deployment.yaml --namespace ${K8S_NAMESPACE}"
                     echo "Aplicando service..."
                     sh "kubectl apply -f infra/k8s/service.yaml --namespace ${K8S_NAMESPACE}"
+                    echo "Aplicando ingress..."
+                    sh "kubectl apply -f infra/k8s/ingress.yaml --namespace ${K8S_NAMESPACE}"
 
                     echo "Verificando rollout do deployment..."
                     sh "kubectl rollout status deployment/django-crm-app --namespace ${K8S_NAMESPACE} --timeout=120s"
