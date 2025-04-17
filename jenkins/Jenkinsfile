@@ -1,4 +1,4 @@
-
+// jenkins/Jenkinsfile
 pipeline {
     agent any
 
@@ -46,24 +46,13 @@ pipeline {
         stage('Test Application') {
             agent {
                 docker {
-                    image 'docker:latest'
-                    args '-v /var/run/docker.sock:/var/run/docker.sock'
+                    image "${IMAGE_NAME}:${env.BUILD_NUMBER}"
+                    reuseNode true
                 }
             }
             steps {
-                echo "Executando testes dentro do container..."
-                script {
-                    docker.image("${IMAGE_NAME}:${env.BUILD_NUMBER}").inside {
-                        try {
-                            dir('/app') {
-                                sh 'python manage.py check'
-                            }
-                        } catch (Exception e) {
-                            echo "Testes falharam: ${e.getMessage()}"
-                            error "Falha nos testes da aplicação."
-                        }
-                    }
-                }
+                echo "Executando testes dentro do container ${IMAGE_NAME}:${env.BUILD_NUMBER}"
+                sh 'python manage.py check'
             }
         }
 
