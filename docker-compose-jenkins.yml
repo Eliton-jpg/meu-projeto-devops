@@ -2,18 +2,18 @@
 services:
   jenkins:
     build:
-      context: . # Diretório atual contém o Dockerfile.jenkins
-      dockerfile: Dockerfile.jenkins # Especifica o nome do Dockerfile
-    # image: jenkins/jenkins:lts-jdk17 # Remova ou comente a linha da imagem
+      context: .
+      dockerfile: Dockerfile.jenkins
     container_name: jenkins-server
     privileged: true
-    user: root # Ainda pode precisar rodar como root para acesso ao socket
+    user: root
     ports:
       - "8090:8080"
       - "50000:50000"
     volumes:
       - jenkins_home:/var/jenkins_home
       - /var/run/docker.sock:/var/run/docker.sock
+      - /usr/local/bin/kind:/usr/local/bin/kind
     networks:
       - jenkins_net
 
@@ -23,3 +23,4 @@ volumes:
 networks:
   jenkins_net:
     driver: bridge
+
