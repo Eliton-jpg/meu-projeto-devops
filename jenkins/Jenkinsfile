@@ -1,4 +1,3 @@
-// jenkins/Jenkinsfile
 pipeline {
     agent any
 
@@ -43,7 +42,7 @@ pipeline {
             }
         }
 
-        stage('Test Application') {
+                stage('Test Application') {
             agent {
                 docker {
                     image "${IMAGE_NAME}:${env.BUILD_NUMBER}"
@@ -51,11 +50,13 @@ pipeline {
                 }
             }
             steps {
-                echo "Executando teste SIMPLES dentro do container ${IMAGE_NAME}:${env.BUILD_NUMBER}"
-                sh 'pwd' // Teste simples
-                echo "Comando 'pwd' tentado."
+                echo "Executando testes dentro do container ${IMAGE_NAME}:${env.BUILD_NUMBER}"
+                dir('/app') { 
+                    sh 'python manage.py check' // Volte para este comando
+                }
             }
         }
+
 
         stage('Deploy to Kubernetes (Kind)') {
             agent any
