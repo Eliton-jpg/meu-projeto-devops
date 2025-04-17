@@ -1,4 +1,3 @@
-// jenkins/Jenkinsfile
 pipeline {
     agent any
 
@@ -55,7 +54,9 @@ pipeline {
                 script {
                     docker.image("${IMAGE_NAME}:${env.BUILD_NUMBER}").inside {
                         try {
-                            sh 'python manage.py check'
+                            dir('/app') {
+                                sh 'python manage.py check'
+                            }
                         } catch (Exception e) {
                             echo "Testes falharam: ${e.getMessage()}"
                             error "Falha nos testes da aplicação."
