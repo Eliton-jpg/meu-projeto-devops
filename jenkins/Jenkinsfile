@@ -10,6 +10,7 @@ pipeline {
 
     stages {
         stage('Checkout') {
+            agent any
             steps {
                 echo 'Clonando o repositório...'
                 checkout scm
@@ -17,6 +18,12 @@ pipeline {
         }
 
         stage('Build Docker Image') {
+            agent {
+                docker {
+                    image 'docker:latest'
+                    args '-v /var/run/docker.sock:/var/run/docker.sock'
+                }
+            }
             steps {
                 echo "Construindo a imagem Docker: ${IMAGE_NAME}:${env.BUILD_NUMBER}"
                 script {
@@ -26,6 +33,7 @@ pipeline {
         }
 
         stage('Load Image into Kind') {
+            agent any
             when {
                 expression { true }
             }
@@ -36,14 +44,18 @@ pipeline {
         }
 
         stage('Test Application') {
-            agent any
+            agent {
+                docker {
+                    image 'docker:latest'
+                    args '-v /var/run/docker.sock:/var/run/docker.sock'
+                }
+            }
             steps {
                 echo "Executando testes dentro do container..."
                 script {
                     docker.image("${IMAGE_NAME}:${env.BUILD_NUMBER}").inside {
                         try {
                             sh 'python manage.py check'
-                            // sh 'pytest' // Descomente se tiver pytest configurado
                         } catch (Exception e) {
                             echo "Testes falharam: ${e.getMessage()}"
                             error "Falha nos testes da aplicação."
@@ -54,6 +66,7 @@ pipeline {
         }
 
         stage('Deploy to Kubernetes (Kind)') {
+            agent any
             steps {
                 echo "Implantando no Kubernetes (Namespace: ${K8S_NAMESPACE})..."
                 withKubeConfig([credentialsId: KUBECONFIG_CREDENTIALS_ID]) {
