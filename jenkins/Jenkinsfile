@@ -1,3 +1,4 @@
+
 pipeline {
     agent any
 
@@ -55,11 +56,7 @@ pipeline {
                     docker.image("${IMAGE_NAME}:${env.BUILD_NUMBER}").inside {
                         try {
                             dir('/app') {
-                                // TESTE: Tente um comando simples primeiro
-                                sh 'ls -la'
-                                echo "Comando 'ls -la' executado com sucesso."
-                                // Comente o comando original por enquanto
-                                // sh 'python manage.py check'
+                                sh 'python manage.py check'
                             }
                         } catch (Exception e) {
                             echo "Testes falharam: ${e.getMessage()}"
