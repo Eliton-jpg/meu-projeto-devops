@@ -1,10 +1,13 @@
 # docker-compose-jenkins.yml
 services:
   jenkins:
-    image: jenkins/jenkins:lts-jdk17
+    build:
+      context: . # Diretório atual contém o Dockerfile.jenkins
+      dockerfile: Dockerfile.jenkins # Especifica o nome do Dockerfile
+    # image: jenkins/jenkins:lts-jdk17 # Remova ou comente a linha da imagem
     container_name: jenkins-server
     privileged: true
-    user: root
+    user: root # Ainda pode precisar rodar como root para acesso ao socket
     ports:
       - "8090:8080"
       - "50000:50000"
