@@ -1,0 +1,39 @@
+# Dockerfile.jenkins
+FROM jenkins/jenkins:lts-jdk17
+
+# Mudar para usuário root para instalar pacotes
+USER root
+
+# 1. Instalar dependências essenciais e lsb-release primeiro
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    apt-transport-https \
+    ca-certificates \
+    curl \
+    gnupg \
+    lsb-release \
+    software-properties-common \
+    && rm -rf /var/lib/apt/lists/*
+
+# 2. Adicionar chave GPG oficial do Docker ao chaveiro do apt
+RUN mkdir -p /etc/apt/keyrings && \
+    curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+
+# 3. Configurar o repositório Docker usando a chave adicionada
+RUN echo \
+  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian \
+  $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+# 4. Atualizar lista de pacotes e instalar Docker CLI
+RUN apt-get update && apt-get install -y docker-ce-cli \
+    && rm -rf /var/lib/apt/lists/*
+
+# (Opcional) Instalar Kind e Kubectl aqui também se não quiser montar do host
+# RUN curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.20.0/kind-linux-amd64 && \
+#     chmod +x ./kind && \
+#     mv ./kind /usr/local/bin/kind
+# RUN curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl" && \
+#     install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl && \
+#     rm kubectl
+
+# Voltar para o usuário jenkins padrão
+USER jenkins
