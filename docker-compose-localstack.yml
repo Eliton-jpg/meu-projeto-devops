@@ -1,0 +1,34 @@
+# docker-compose-localstack.yml
+
+services:
+  localstack:
+    image: localstack/localstack:latest # Tentar a versão mais recente
+    container_name: localstack_main
+    ports:
+      # Mapeia apenas no localhost para segurança
+      - "127.0.0.1:4566:4566"            # Porta principal para APIs AWS
+      - "127.0.0.1:4510-4559:4510-4559"  # Portas legadas (opcional)
+    environment:
+      - DEBUG=1 # Habilita logs detalhados para diagnóstico
+      # - SERVICES=s3,dynamodb # Opcional: pode acelerar a inicialização
+      - DOCKER_HOST=unix:///var/run/docker.sock
+      # Não definir DATA_DIR, deixar o LocalStack usar o padrão interno
+    volumes:
+      # Usar um volume nomeado para persistência/estado interno
+      - localstack_data:/var/lib/localstack
+      # Mapear o socket Docker do host
+      - "/var/run/docker.sock:/var/run/docker.sock"
+    networks:
+      - localstack_net
+    # healthcheck: # Opcional: verifica se o LocalStack está pronto
+    #   test: ["CMD", "curl", "-f", "http://localhost:4566/health"]
+    #   interval: 10s
+    #   timeout: 5s
+    #   retries: 5
+
+networks:
+  localstack_net:
+    driver: bridge
+
+volumes:
+  localstack_data: # Define o volume nomeado
