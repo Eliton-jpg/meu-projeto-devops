@@ -17,7 +17,9 @@ spec:
     spec:
       containers:
       - name: django-crm
-        image: meu-app-django:latest
+        image: meu-app-django:latest # Tag será substituída pelo Jenkins
         ports:
         - containerPort: 8000
-
+        command: ["python"]
+        args: ["manage.py", "runserver", "0.0.0.0:8000"]
+      
