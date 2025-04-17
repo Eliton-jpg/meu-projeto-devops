@@ -1,3 +1,4 @@
+// jenkins/Jenkinsfile
 pipeline {
     agent any
 
@@ -42,21 +43,19 @@ pipeline {
             }
         }
 
-                stage('Test Application') {
-            agent {
-                docker {
-                    image "${IMAGE_NAME}:${env.BUILD_NUMBER}"
-                    reuseNode true
-                }
-            }
+        stage('Test Application') {
+            agent any
             steps {
-                echo "Executando testes dentro do container ${IMAGE_NAME}:${env.BUILD_NUMBER}"
-                dir('/app') { 
-                    sh 'python manage.py check' // Volte para este comando
-                }
+                echo "Executando testes via docker run..."
+                sh """
+                    docker run --rm \
+                        -w /app \
+                        --entrypoint="" \
+                        ${IMAGE_NAME}:${env.BUILD_NUMBER} \
+                        python manage.py check
+                """
             }
         }
-
 
         stage('Deploy to Kubernetes (Kind)') {
             agent any
