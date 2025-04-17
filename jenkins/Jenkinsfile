@@ -35,6 +35,24 @@ pipeline {
             }
         }
 
+        stage('Test Application') {
+            agent any
+            steps {
+                echo "Executando testes dentro do container..."
+                script {
+                    docker.image("${IMAGE_NAME}:${env.BUILD_NUMBER}").inside {
+                        try {
+                            sh 'python manage.py check'
+                            // sh 'pytest' // Descomente se tiver pytest configurado
+                        } catch (Exception e) {
+                            echo "Testes falharam: ${e.getMessage()}"
+                            error "Falha nos testes da aplicação."
+                        }
+                    }
+                }
+            }
+        }
+
         stage('Deploy to Kubernetes (Kind)') {
             steps {
                 echo "Implantando no Kubernetes (Namespace: ${K8S_NAMESPACE})..."
