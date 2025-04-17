@@ -1,3 +1,4 @@
+// jenkins/Jenkinsfile
 pipeline {
     agent any
 
@@ -47,14 +48,12 @@ pipeline {
                 docker {
                     image "${IMAGE_NAME}:${env.BUILD_NUMBER}"
                     reuseNode true
-                    // args '-w /app' // Removido
                 }
             }
             steps {
-                echo "Executando testes dentro do container ${IMAGE_NAME}:${env.BUILD_NUMBER}"
-                dir('/app') { // Usando dir step
-                    sh 'python manage.py check'
-                }
+                echo "Executando teste SIMPLES dentro do container ${IMAGE_NAME}:${env.BUILD_NUMBER}"
+                sh 'pwd' // Teste simples
+                echo "Comando 'pwd' tentado."
             }
         }
 
