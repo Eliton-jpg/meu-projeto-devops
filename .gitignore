@@ -1,0 +1,54 @@
+# Terraform state and providers
+*.tfstate
+*.tfstate.*
+.terraform/
+*.tfvars
+
+# LocalStack data (se mapeado do host)
+.localstack/
+*/.localstack/
+
+# AWS CLI install directory
+aws/
+
+# Kubernetes config / binaries
+kind-kubeconfig.yaml
+kubectl
+
+# Python cache/build artifacts
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+env/
+venv/
+.Python
+pip-wheel-metadata/
+app/__pycache__/
+app/*.py[cod]
+
+# IDE/Editor config
+.vscode/
+.idea/
+*.swp
+*~
+
+# Docker Compose override files (geralmente locais)
+docker-compose.override.yml
+
+# Jenkins workspace/data (se mapeado localmente)
+jenkins_home/
+
+# Outros dados/logs de serviços (se mapeados localmente)
+sonarqube_conf/
+sonarqube_data/
+sonarqube_extensions/
+sonarqube_logs/
+es_data/
+kibana_data/
+filebeat_data/
+prometheus_data/
+grafana_data/
+positions/
+loki_data/

@@ -1,0 +1,68 @@
+// jenkins/Jenkinsfile
+pipeline {
+    agent any
+
+    environment {
+        IMAGE_NAME = 'meu-app-django'
+        KUBECONFIG_CREDENTIALS_ID = 'kubeconfig-kind'
+        K8S_NAMESPACE = 'default'
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                echo 'Clonando o repositório...'
+                checkout scm
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                echo "Construindo a imagem Docker: ${IMAGE_NAME}:${env.BUILD_NUMBER}"
+                script {
+                    def dockerImage = docker.build("${IMAGE_NAME}:${env.BUILD_NUMBER}", "./app")
+                }
+            }
+        }
+
+        stage('Load Image into Kind') {
+            when {
+                expression { true }
+            }
+            steps {
+                echo "Carregando imagem ${IMAGE_NAME}:${env.BUILD_NUMBER} no cluster Kind..."
+                sh "kind load docker-image ${IMAGE_NAME}:${env.BUILD_NUMBER} --name staging-cluster"
+            }
+        }
+
+        stage('Deploy to Kubernetes (Kind)') {
+            steps {
+                echo "Implantando no Kubernetes (Namespace: ${K8S_NAMESPACE})..."
+                withKubeConfig([credentialsId: KUBECONFIG_CREDENTIALS_ID]) {
+                    sh "sed -i 's|image: .*|image: ${IMAGE_NAME}:${env.BUILD_NUMBER}|g' infra/k8s/deployment.yaml"
+
+                    echo "Aplicando deployment..."
+                    sh "kubectl apply -f infra/k8s/deployment.yaml --namespace ${K8S_NAMESPACE}"
+                    echo "Aplicando service..."
+                    sh "kubectl apply -f infra/k8s/service.yaml --namespace ${K8S_NAMESPACE}"
+
+                    echo "Verificando rollout do deployment..."
+                    sh "kubectl rollout status deployment/django-crm-app --namespace ${K8S_NAMESPACE} --timeout=120s"
+                }
+            }
+        }
+
+    }
+
+    post {
+        always {
+            echo 'Pipeline finalizado.'
+        }
+        success {
+            echo 'Pipeline executado com sucesso!'
+        }
+        failure {
+            echo 'Pipeline falhou!'
+        }
+    }
+}

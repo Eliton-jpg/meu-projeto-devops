@@ -1,0 +1,22 @@
+# docker-compose-jenkins.yml
+services:
+  jenkins:
+    image: jenkins/jenkins:lts-jdk17
+    container_name: jenkins-server
+    privileged: true
+    user: root
+    ports:
+      - "8090:8080"
+      - "50000:50000"
+    volumes:
+      - jenkins_home:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - jenkins_net
+
+volumes:
+  jenkins_home:
+
+networks:
+  jenkins_net:
+    driver: bridge
