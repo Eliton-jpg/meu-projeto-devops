@@ -48,10 +48,13 @@ pipeline {
                 docker {
                     image "${IMAGE_NAME}:${env.BUILD_NUMBER}"
                     reuseNode true
+                    // Adicione esta linha para definir o diretório de trabalho do agente
+                    args '-w /app'
                 }
             }
             steps {
                 echo "Executando testes dentro do container ${IMAGE_NAME}:${env.BUILD_NUMBER}"
+                // Agora o comando sh será executado a partir de /app por padrão
                 sh 'python manage.py check'
             }
         }
