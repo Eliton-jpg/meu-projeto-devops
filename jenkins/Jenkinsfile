@@ -1,4 +1,3 @@
-// jenkins/Jenkinsfile
 pipeline {
     agent any
 
@@ -48,14 +47,14 @@ pipeline {
                 docker {
                     image "${IMAGE_NAME}:${env.BUILD_NUMBER}"
                     reuseNode true
-                    // Adicione esta linha para definir o diretório de trabalho do agente
-                    args '-w /app'
+                    // args '-w /app' // Removido
                 }
             }
             steps {
                 echo "Executando testes dentro do container ${IMAGE_NAME}:${env.BUILD_NUMBER}"
-                // Agora o comando sh será executado a partir de /app por padrão
-                sh 'python manage.py check'
+                dir('/app') { // Usando dir step
+                    sh 'python manage.py check'
+                }
             }
         }
 
