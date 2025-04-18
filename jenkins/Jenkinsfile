@@ -1,3 +1,4 @@
+// jenkins/Jenkinsfile
 pipeline {
     agent any
 
@@ -50,22 +51,22 @@ pipeline {
             steps {
                 echo "Implantando no Kubernetes (Namespace: ${K8S_NAMESPACE})..."
                 withKubeConfig([credentialsId: KUBECONFIG_CREDENTIALS_ID]) {
-                    sh "sed -i 's|image: .*|image: ${IMAGE_NAME}:${env.BUILD_NUMBER}|g' k8s/deployment.yaml"
+                    sh "sed -i 's|image: .*|image: ${IMAGE_NAME}:${env.BUILD_NUMBER}|g' infra/k8s/deployment.yaml"
 
                     echo "Aplicando deployment..."
-                    sh "kubectl apply -f k8s/deployment.yaml --namespace ${K8S_NAMESPACE}"
+                    sh "kubectl apply -f infra/k8s/deployment.yaml --namespace ${K8S_NAMESPACE}"
                     echo "Aplicando service..."
-                    sh "kubectl apply -f k8s/service.yaml --namespace ${K8S_NAMESPACE}"
+                    sh "kubectl apply -f infra/k8s/service.yaml --namespace ${K8S_NAMESPACE}"
                     echo "Aplicando ingress..."
-                    sh "kubectl apply -f k8s/ingress.yaml --namespace ${K8S_NAMESPACE}"
+                    sh "kubectl apply -f infra/k8s/ingress.yaml --namespace ${K8S_NAMESPACE}"
 
                     echo "Verificando rollout do deployment..."
                     script {
-                        def deploymentName = sh(script: "grep 'name:' k8s/deployment.yaml | head -n 1 | awk '{print \$2}'", returnStdout: true).trim()
+                        def deploymentName = sh(script: "grep 'name:' infra/k8s/deployment.yaml | head -n 1 | awk '{print \$2}'", returnStdout: true).trim()
                         if (deploymentName) {
                              sh "kubectl rollout status deployment/${deploymentName} -n ${K8S_NAMESPACE} --timeout=120s"
                         } else {
-                            echo "WARN: Não foi possível extrair o nome do deployment de k8s/deployment.yaml."
+                            echo "WARN: Não foi possível extrair o nome do deployment de infra/k8s/deployment.yaml."
                         }
                     }
                 }
