@@ -1,6 +1,4 @@
-**IMPORTANTE: Para evitar erros dar git clone na branch main**
-
-# Teste Técnico DevOps Jr: Implantação de Aplicação Web com CI/CD
+Teste Técnico DevOps Jr: Implantação de Aplicação Web com CI/CD
 
 ## Introdução
 
@@ -516,7 +514,6 @@ Devido a dificuldades encontradas para acessar a aplicação diretamente via `lo
 * **Desafio - Kubeconfig:** O `kubeconfig` gerado pelo Kind precisou ser editado (`server:` apontando para `staging-cluster-control-plane:6443`) e atualizado na credencial do Jenkins para permitir a comunicação `kubectl` de dentro do container Jenkins. Erros de formatação YAML e dados Base64 corrompidos na credencial causaram falhas no pipeline e exigiram depuração cuidadosa.
 * **Desafio - Acesso via Ingress:** O acesso à aplicação via `localhost:8080` (mapeamento Kind) ou `localhost:30080` (NodePort) não funcionou no ambiente de teste, apesar da configuração interna do Kubernetes parecer correta. O `kubectl port-forward` foi usado como workaround funcional.
 * **Desafio - Integração SonarQube:** Dificuldades na configuração da ferramenta JDK (`jdk17`) em "Global Tool Configuration" impediram a execução bem-sucedida dos estágios SonarQube no pipeline, levando à decisão de revertê-los temporariamente.
-
 
 ```bash
 #!/bin/bash
