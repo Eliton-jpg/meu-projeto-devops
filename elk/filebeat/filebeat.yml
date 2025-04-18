@@ -1,0 +1,26 @@
+# elk/filebeat/filebeat.yml
+
+# Ativa autodiscover para containers Docker
+filebeat.autodiscover:
+  providers:
+    - type: docker
+      hints.enabled: true
+      # (Opcional) Adicionar condição para não coletar logs do próprio filebeat
+      # condition:
+      #   not:
+      #     contains:
+      #       container.labels.com.docker.compose.service: "filebeat"
+
+# (Opcional) Módulos Filebeat (ex: system, nginx) - Não usaremos agora
+# filebeat.config.modules:
+#   path: ${path.config}/modules.d/*.yml
+#   reload.enabled: false
+
+output.elasticsearch:
+  
+  hosts: ["http://elasticsearch_log:9200"] 
+  index: "filebeat-%{[agent.version]}-%{+yyyy.MM.dd}" 
+
+logging.level: info
+logging.to_files: false
+logging.to_syslog: false
