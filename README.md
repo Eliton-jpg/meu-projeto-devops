@@ -1,3 +1,4 @@
+**IMPORTANTE: Para evitar erros dar git clone na branch main**
 
 # Teste Técnico DevOps Jr: Implantação de Aplicação Web com CI/CD
 
