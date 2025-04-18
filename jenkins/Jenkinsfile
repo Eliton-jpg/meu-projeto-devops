@@ -10,8 +10,7 @@ pipeline {
     }
 
     tools {
-        jdk 'jdk17' // Certifique-se que 'jdk17' é o nome do JDK configurado em Global Tool Configuration
-        tool 'SonarScanner' // Certifique-se que 'SonarScanner' é o nome da ferramenta configurada
+        jdk 'jdk17'
     }
 
     stages {
@@ -47,7 +46,7 @@ pipeline {
                     docker run --rm \
                         --entrypoint="" \
                         ${IMAGE_NAME}:${env.BUILD_NUMBER} \
-                        python app/manage.py check
+                        python manage.py check
                 """
             }
         }
@@ -89,7 +88,6 @@ pipeline {
             steps {
                 echo "Implantando no Kubernetes (Namespace: ${K8S_NAMESPACE})..."
                 withKubeConfig([credentialsId: KUBECONFIG_CREDENTIALS_ID]) {
-                    // Assumindo que os arquivos K8s estão em 'k8s/'
                     sh "sed -i 's|image: .*|image: ${IMAGE_NAME}:${env.BUILD_NUMBER}|g' k8s/deployment.yaml"
 
                     echo "Aplicando deployment..."
