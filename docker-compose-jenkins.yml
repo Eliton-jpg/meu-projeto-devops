@@ -1,11 +1,8 @@
-# docker-compose-jenkins.yml
 services:
   jenkins:
-    # Mantenha a configuração de build ou image que funcionou
     build:
       context: .
       dockerfile: Dockerfile.jenkins
-    # Ou image: jenkins/jenkins:lts-jdk17
     container_name: jenkins-server
     privileged: true
     user: root
@@ -18,16 +15,14 @@ services:
       - /usr/local/bin/kind:/usr/local/bin/kind
       - /usr/local/bin/kubectl:/usr/local/bin/kubectl
     networks:
-      # Mantenha a jenkins_net (será criada pelo compose)
-      - jenkins_net
-      # Adicione a rede 'kind'
+      - devops-net
       - kind
 
 volumes:
   jenkins_home:
 
 networks:
-  jenkins_net: # Compose vai criar esta
-    driver: bridge
-  kind: # Declare a rede 'kind' como externa
+  devops-net:
+    external: true
+  kind:
     external: true
