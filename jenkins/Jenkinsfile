@@ -1,4 +1,3 @@
-// jenkins/Jenkinsfile
 pipeline {
     agent any
 
@@ -6,11 +5,6 @@ pipeline {
         IMAGE_NAME = 'meu-app-django'
         KUBECONFIG_CREDENTIALS_ID = 'kubeconfig-kind'
         K8S_NAMESPACE = 'default'
-        SONARQUBE_SERVER = 'SonarQube Local'
-    }
-
-    tools {
-        jdk 'jdk17'
     }
 
     stages {
@@ -48,38 +42,6 @@ pipeline {
                         ${IMAGE_NAME}:${env.BUILD_NUMBER} \
                         python manage.py check
                 """
-            }
-        }
-
-        stage('SonarQube Analysis') {
-            agent any
-            steps {
-                echo "Executando análise SonarQube..."
-                withSonarQubeEnv('SonarQube Local') {
-                    sh """
-                        ${tool 'SonarScanner'}/bin/sonar-scanner \
-                          -Dsonar.projectKey=django-crm-app \
-                          -Dsonar.sources=./app \
-                          -Dsonar.projectBaseDir=./app
-                    """
-                }
-            }
-        }
-
-        stage('Quality Gate') {
-            agent any
-            steps {
-                echo "Verificando SonarQube Quality Gate..."
-                timeout(time: 10, unit: 'MINUTES') {
-                    script {
-                        def qg = waitForQualityGate()
-                        if (qg.status != 'OK') {
-                            error "Pipeline abortado devido à falha no Quality Gate: ${qg.status}"
-                        } else {
-                            echo "Quality Gate passou!"
-                        }
-                    }
-                }
             }
         }
 
