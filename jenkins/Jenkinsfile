@@ -3,10 +3,12 @@ pipeline {
     agent any
 
     environment {
-        IMAGE_NAME = 'meu-app-django'
-        KUBECONFIG_CREDENTIALS_ID = 'kubeconfig-kind'
-        K8S_NAMESPACE = 'default'
-        SONARQUBE_SERVER = 'SonarQube Local'
+        IMAGE_NAME = 'meu-app-django' // Considere usar o nome do DockerHub se for fazer push: 'seu-dockerhub-user/meu-app-django'
+        KUBECONFIG_CREDENTIALS_ID = 'kubeconfig-kind' // ID da credencial 'Secret file' ou 'Secret text' no Jenkins
+        K8S_NAMESPACE = 'default' // Ou 'staging' se você criou esse namespace
+        SONARQUBE_SERVER = 'SonarQube Local' // Nome do servidor SonarQube configurado no Jenkins
+        // SONAR_HOST_URL é injetado pelo withSonarQubeEnv
+        // SONAR_AUTH_TOKEN é injetado pelo withSonarQubeEnv
     }
 
     stages {
@@ -19,55 +21,54 @@ pipeline {
         }
 
         stage('Build Docker Image') {
-            agent {
-                docker {
-                    image 'docker:latest'
-                    args '-v /var/run/docker.sock:/var/run/docker.sock'
-                }
-            }
+            // Usar agente Docker é bom, mas como você monta o kind/kubectl no compose,
+            // talvez 'agent any' funcione se o Docker CLI estiver disponível no agente Jenkins base.
+            // Se o Jenkins roda como container via compose, 'agent any' refere-se a esse container.
+            agent any
             steps {
                 echo "Construindo a imagem Docker: ${IMAGE_NAME}:${env.BUILD_NUMBER}"
-                script {
-                    def dockerImage = docker.build("${IMAGE_NAME}:${env.BUILD_NUMBER}", "./app")
-                }
+                // O Docker CLI precisa estar acessível aqui (via docker.sock montado)
+                sh "docker build -t ${IMAGE_NAME}:${env.BUILD_NUMBER} ./app"
+                // Removido o script { docker.build(...) } pois pode ser complexo sem o plugin Docker Pipeline configurado corretamente
             }
         }
 
         stage('Load Image into Kind') {
-            agent any
-            when {
-                expression { true }
-            }
+            agent any // Precisa ter acesso ao binário 'kind' e ao docker.sock
             steps {
                 echo "Carregando imagem ${IMAGE_NAME}:${env.BUILD_NUMBER} no cluster Kind..."
+                // Certifique-se que 'staging-cluster' é o nome correto do seu cluster Kind
                 sh "kind load docker-image ${IMAGE_NAME}:${env.BUILD_NUMBER} --name staging-cluster"
             }
         }
 
-        stage('Test Application') {
-            agent any
+        stage('Test Application (Check)') {
+            // Roda um comando simples dentro do container recém-buildado
+            agent any // Precisa ter acesso ao docker cli
             steps {
-                echo "Executando testes via docker run..."
+                echo "Executando 'manage.py check' via docker run..."
+                // Garante que a imagem existe localmente antes de rodar
                 sh """
                     docker run --rm \
-                        -w /app \
                         --entrypoint="" \
                         ${IMAGE_NAME}:${env.BUILD_NUMBER} \
-                        python manage.py check
+                        python app/manage.py check
                 """
+                // Nota: Ajuste o caminho 'app/manage.py' se necessário, dependendo do WORKDIR no Dockerfile
             }
         }
 
         stage('SonarQube Analysis') {
-            agent {
-                docker {
-                    image 'sonarsource/sonar-scanner-cli:latest'
-                    args '--network=meu-projeto-devops_jenkins_net' // Nome da rede ajustado
-                }
-            }
+            // O agente precisa ter o sonar-scanner e Java, ou usar um agente Docker
+            agent any // Assumindo que sonar-scanner está no PATH ou usar tool
+            // Se usar tool: tools { jdk 'auto'; tool 'SonarScanner' }
             steps {
                 echo "Executando análise SonarQube..."
+                // Certifique-se que 'SonarQube Local' está configurado em Manage Jenkins -> Configure System
+                // E que o token está associado a ele.
                 withSonarQubeEnv(SONARQUBE_SERVER) {
+                    // O sonar-scanner precisa estar disponível no agente
+                    // Se não estiver no PATH, use: def scannerHome = tool 'SonarScanner'; sh "${scannerHome}/bin/sonar-scanner ..."
                     sh """
                         sonar-scanner \
                           -Dsonar.projectKey=django-crm-app \
@@ -76,7 +77,11 @@ pipeline {
                           -Dsonar.login=${env.SONAR_AUTH_TOKEN} \
                           -Dsonar.projectName='Django CRM Application' \
                           -Dsonar.sourceEncoding=UTF-8 \
-                          -Dsonar.python.version=3.9
+                          -Dsonar.python.version=3.9 \
+                          -Dsonar.projectBaseDir=./app
+                          # Adicione outras propriedades se necessário (exclusions, coverage reports etc.)
+                          # -Dsonar.exclusions=**/migrations/**,**/tests/**,venv/**
+                          # -Dsonar.python.coverage.reportPaths=app/coverage.xml
                     """
                 }
             }
@@ -87,41 +92,56 @@ pipeline {
             steps {
                 echo "Verificando SonarQube Quality Gate..."
                 timeout(time: 10, unit: 'MINUTES') {
-                    def qg = waitForQualityGate()
-                    if (qg.status != 'OK') {
-                        error "Pipeline abortado devido à falha no Quality Gate: ${qg.status}"
-                    } else {
-                        echo "Quality Gate passou!"
-                    }
+                    // O webhook do SonarQube para Jenkins precisa estar configurado para isso funcionar bem
+                    // SonarQube -> Administration -> Configuration -> Webhooks
+                    // URL: <JENKINS_URL>/sonarqube-webhook/
+                    script { // <--- CORREÇÃO APLICADA AQUI
+                        def qg = waitForQualityGate()
+                        if (qg.status != 'OK') {
+                            error "Pipeline abortado devido à falha no Quality Gate: ${qg.status}"
+                        } else {
+                            echo "Quality Gate passou!"
+                        }
+                    } // <--- FIM DO SCRIPT BLOCK
                 }
             }
         }
 
         stage('Deploy to Kubernetes (Kind)') {
-            agent any
+            agent any // Precisa ter kubectl e acesso ao kubeconfig
             steps {
                 echo "Implantando no Kubernetes (Namespace: ${K8S_NAMESPACE})..."
+                // Usa a credencial definida no environment KUBECONFIG_CREDENTIALS_ID
                 withKubeConfig([credentialsId: KUBECONFIG_CREDENTIALS_ID]) {
-                    sh "sed -i 's|image: .*|image: ${IMAGE_NAME}:${env.BUILD_NUMBER}|g' infra/k8s/deployment.yaml"
+                    // Cuidado com o caminho relativo aqui. Onde estão os arquivos k8s?
+                    // Assumindo que estão em 'k8s/' na raiz do repo
+                    sh "sed -i 's|image: .*|image: ${IMAGE_NAME}:${env.BUILD_NUMBER}|g' k8s/deployment.yaml"
 
                     echo "Aplicando deployment..."
-                    sh "kubectl apply -f infra/k8s/deployment.yaml --namespace ${K8S_NAMESPACE}"
+                    sh "kubectl apply -f k8s/deployment.yaml --namespace ${K8S_NAMESPACE}"
                     echo "Aplicando service..."
-                    sh "kubectl apply -f infra/k8s/service.yaml --namespace ${K8S_NAMESPACE}"
+                    sh "kubectl apply -f k8s/service.yaml --namespace ${K8S_NAMESPACE}"
                     echo "Aplicando ingress..."
-                    sh "kubectl apply -f infra/k8s/ingress.yaml --namespace ${K8S_NAMESPACE}"
+                    sh "kubectl apply -f k8s/ingress.yaml --namespace ${K8S_NAMESPACE}"
 
                     echo "Verificando rollout do deployment..."
-                    sh "kubectl rollout status deployment/django-crm-app --namespace ${K8S_NAMESPACE} --timeout=120s"
+                    // Extrai o nome do deployment do arquivo para robustez
+                    def deploymentName = sh(script: "grep 'name:' k8s/deployment.yaml | head -n 1 | awk '{print \$2}'", returnStdout: true).trim()
+                    if (deploymentName) {
+                         sh "kubectl rollout status deployment/${deploymentName} -n ${K8S_NAMESPACE} --timeout=120s"
+                    } else {
+                        echo "WARN: Não foi possível extrair o nome do deployment de k8s/deployment.yaml. Pulando verificação de rollout."
+                        // Ou falhar o build: error "Não foi possível extrair nome do deployment"
+                    }
                 }
             }
         }
-
-    }
+    } // Fim stages
 
     post {
         always {
             echo 'Pipeline finalizado.'
+            // cleanWs() // Descomente para limpar o workspace no final
         }
         success {
             echo 'Pipeline executado com sucesso!'
@@ -130,4 +150,4 @@ pipeline {
             echo 'Pipeline falhou!'
         }
     }
-}
+} // Fim pipeline
